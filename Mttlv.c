@@ -243,7 +243,7 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         if (HEADER_GET_MAC(MTNtlv->header)==1)
             
         {           MTNtlv->mac = va_arg(ap,uint64_t);
-            //printf("%02x\n",MTNtlv->mac);
+            
             ((uint64_t*)(buffer + *offset))[0] = htonll(MTNtlv->mac);
             
                     *offset+=8;
