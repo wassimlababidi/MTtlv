@@ -59,6 +59,7 @@
 #include "Time.h"
 #include <stdarg.h>
 #include <netinet/in.h>
+
 #define SENS_X_ID	0x15
 //PACK(
 typedef struct __attribute__((__packed__)) {
@@ -78,12 +79,13 @@ void main()
     sensXdata.val3 = 0x43;
     uint8_t offset = 0;
     uint16_t version=0;
-    uint8_t macPresent=0;
+    uint8_t macPresent=1;
     uint8_t tstmpVer=TSTMP_EPOCH;
     uint8_t typeVer=DTYPE_2BYTES;
     uint8_t lenPresent=0;
     TNtlv_t MTNtlv;
     int s;
+    uint64_t mac=0x0f0e0d0c0b0a0908;
     s=createHEADER( &version , macPresent,
                   tstmpVer,  typeVer,
                  lenPresent, &MTNtlv);
@@ -98,7 +100,7 @@ void main()
     
     for (int i=0;i<=MTTLV_MAX_SIZE+8;i+=8)
     {
-    insertObject( &MTNtlv, buffer, &offset, &sensXdata.val1,1,sizeof(sensXdata.val1));
+    insertObject( &MTNtlv, buffer, &offset, &sensXdata.val1,1,0x0f0e0d0c0b0a0908);
     }
     //printf("%d",offset);
  
@@ -239,8 +241,11 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         buffer[*offset]=MTNtlv->header;
         *offset+=1;
         if (HEADER_GET_MAC(MTNtlv->header)==1)
+            
         {           MTNtlv->mac = va_arg(ap,uint64_t);
-                    buffer[*offset]=MTNtlv->mac;
+            //printf("%02x\n",MTNtlv->mac);
+            ((uint64_t*)(buffer + *offset))[0] = htonll(MTNtlv->mac);
+            
                     *offset+=8;
         }
         
@@ -307,8 +312,6 @@ void test(uint8_t* buffer,uint8_t* offset)
         printf("%02x ",buffer[i]);
     }
 }
-
-
 
 
 
