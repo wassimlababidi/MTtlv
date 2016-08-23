@@ -74,10 +74,10 @@ void test(uint8_t* buffer,uint8_t* offset);
 
 int createHEADER(uint16_t* version ,uint8_t macPresent,
                   uint8_t tstmpVer, uint8_t typeVer,
-                  uint8_t lenPresent,TNtlv_t* MTNtlv,...
+                  uint8_t lenPresent,TNtlv_t* MTNtlv
                   );   // returns size
 
-void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense_values,uint8_t type,uint8_t value_size); // inserting mttlvs into the buffer
+void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense_values,uint16_t type,...); // inserting mttlvs into the buffer
 
 int SaveThePacket(TNtlv_t* MTNtlv, int MN,int j,uint8_t*values,uint8_t *t_value,uint8_t object_size);
 // saves the packet from the buffer then resets all parameters
