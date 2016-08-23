@@ -67,7 +67,8 @@ typedef struct __attribute__((__packed__)) {
 }sensXdata_t;   //packet data
 
 
-
+/*
+test"
 
 void main()
 {
@@ -105,6 +106,7 @@ void main()
     
 
     }
+    */
 
 uint32_t swap_bytes32(uint32_t* num){
     uint32_t swapped = ((*num>>24)&0xff) | // move byte 3 to byte 0
