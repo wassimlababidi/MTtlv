@@ -58,8 +58,6 @@
 #include "Lib.h"
 #include "Time.h"
 #include <stdarg.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #define SENS_X_ID	0x15
 //PACK(
