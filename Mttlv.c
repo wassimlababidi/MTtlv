@@ -58,6 +58,9 @@
 #include "Lib.h"
 #include "Time.h"
 #include <stdarg.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #define SENS_X_ID	0x15
 //PACK(
 typedef struct __attribute__((__packed__)) {
@@ -67,8 +70,7 @@ typedef struct __attribute__((__packed__)) {
 }sensXdata_t;   //packet data
 
 
-/*
-test"
+
 
 void main()
 {
@@ -106,7 +108,6 @@ void main()
     
 
     }
-    */
 
 uint32_t swap_bytes32(uint32_t* num){
     uint32_t swapped = ((*num>>24)&0xff) | // move byte 3 to byte 0
@@ -153,44 +154,45 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
     if (macPresent==1) {
         mac_size = 8;
         HEADER_SET_MAC(header, 1);
-        printf("OK!mac\n");
+       // printf("OK!mac\n");
         
     }
     else {
         HEADER_SET_MAC(header, 0);
-        printf("ok no mac\n");
+        //printf("ok no mac\n");
     }
     if (tstmpVer == TSTMP_ELIDED) {         // elided here either means passed as arguement or not needed
         tstmp_size = 0;
         HEADER_SET_TSTMP(header, TSTMP_ELIDED);
-        printf("elided time\n");
+     //   printf("elided time\n");
         
     }
     else {                                  // means epoch timestamp
         HEADER_SET_TSTMP(header, TSTMP_EPOCH);
         MTNtlv->timestamp=(int)time(NULL);
-        printf("epoch time\n");
+      //  printf("epoch time\n");
     }
     if (typeVer == DTYPE_2BYTES) {
         type_size = 2;
         HEADER_SET_DTYPE(header, DTYPE_2BYTES);
-        printf("2 bytes nigha\n");
+      //  printf("2 bytes nigha\n");
     }
     else {
         HEADER_SET_DTYPE(header, DTYPE_1BYTE);
-        printf("1 byte mf\n");
+      //  printf("1 byte mf\n");
     }
     if (lenPresent==1) {
         HEADER_SET_DLEN(header, 1);
-        printf("len 1 \n");}
+       // printf("len 1 \n");
+    }
     else if ( lenPresent==2){
         HEADER_SET_DLEN(header, 2);
-        printf("len 2 \n");
+       // printf("len 2 \n");
     }
     else if (lenPresent==3)
     {
         HEADER_SET_DLEN(header, 3);
-        printf("len 3 \n");
+       // printf("len 3 \n");
     }
     
     else {
@@ -199,7 +201,7 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
     
     
     MTNtlv->header = header;
-    printf("the header is  %02x\n",header);
+   // printf("the header is  %02x\n",header);
     
     finalSize=HEADER_SIZE+tstmp_size+mac_size+type_size;
     
@@ -226,7 +228,7 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         {
             printf("wrong value type, size too big");
         }
-        test(buffer,offset);
+        test(buffer,offset); //TODO: test function is to print the packet , but please replace by the send function when integrating into code
         *offset=0;
     }
     
@@ -246,14 +248,14 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         
         if (HEADER_GET_TSTMP(MTNtlv->header)==TSTMP_EPOCH)
         {
-                    ((uint32_t*)(buffer + *offset))[0]=swap_bytes32(&(MTNtlv->timestamp));
+                    ((uint32_t*)(buffer + *offset))[0]=htonl(MTNtlv->timestamp);
                     *offset+=4;
                     printf("timestamp %x\n",MTNtlv->timestamp);
         }
         else
         {
                     MTNtlv->timestamp= va_arg(ap,uint32_t);
-                    ((uint32_t*)(buffer + *offset))[0]=swap_bytes32(&(MTNtlv->timestamp));
+                    ((uint32_t*)(buffer + *offset))[0]=htonl(MTNtlv->timestamp);
                     *offset+=4;
                     printf("timestamp %x\n",MTNtlv->timestamp);
         }
@@ -264,14 +266,14 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         
         if (HEADER_GET_DTYPE(MTNtlv->header)==DTYPE_2BYTES)
         {
-                    ((uint16_t*)(buffer + *offset))[0] = swap_bytes16(&type);
+                    ((uint16_t*)(buffer + *offset))[0] = htons(type);
                     *offset+=2;
         }
         else
         {
                     buffer[*offset]=type;
                     *offset+=1;
-                    printf("1 homie\n");
+                   // printf("1 homie\n");
         }
         
         if (HEADER_GET_DLEN(MTNtlv->header)==1)
@@ -286,7 +288,8 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
             
         }
         buffer[*offset]=*sense_values;
-        *offset+=sizeof(sense_values);
+        *offset+=sizeof(sense_values)/8;
+      
        /* int i=0;
         for(i=0;i<=*offset;i+=1)
         {
