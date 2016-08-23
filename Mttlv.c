@@ -57,6 +57,7 @@
 #include <stdio.h>
 #include "Lib.h"
 #include "Time.h"
+#include <stdarg.h>
 #define SENS_X_ID	0x15
 //PACK(
 typedef struct __attribute__((__packed__)) {
@@ -66,7 +67,7 @@ typedef struct __attribute__((__packed__)) {
 }sensXdata_t;   //packet data
 
 
-/* Test:
+
 
 void main()
 {
@@ -76,10 +77,10 @@ void main()
     sensXdata.val3 = 0x43;
     uint8_t offset = 0;
     uint16_t version=0;
-    uint8_t macPresent=SINGLE_TLV;
+    uint8_t macPresent=0;
     uint8_t tstmpVer=TSTMP_EPOCH;
-    uint8_t typeVer=DTYPE_1BYTE;
-    uint8_t lenPresent=1;
+    uint8_t typeVer=DTYPE_2BYTES;
+    uint8_t lenPresent=0;
     TNtlv_t MTNtlv;
     int s;
     s=createHEADER( &version , macPresent,
@@ -91,27 +92,37 @@ void main()
         }
         else
         {
-            printf("the size is %d",s);
+            printf("the size is %d \n",s);
         }
     
     for (int i=0;i<=MTTLV_MAX_SIZE+8;i+=8)
     {
     insertObject( &MTNtlv, buffer, &offset, &sensXdata.val1,1,sizeof(sensXdata.val1));
     }
-    printf("%d",offset);
+    //printf("%d",offset);
  
-
+   // test(buffer,&offset);
     
 
     }
 
-*/
+uint32_t swap_bytes32(uint32_t* num){
+    uint32_t swapped = ((*num>>24)&0xff) | // move byte 3 to byte 0
+    ((*num<<8)&0xff0000) | // move byte 1 to byte 2
+    ((*num>>8)&0xff00) | // move byte 2 to byte 1
+    ((*num<<24)&0xff000000); // byte 0 to byte 3
+    return swapped;
+}
 
+uint16_t swap_bytes16(uint16_t* num){
+    uint16_t swapped = (*num>>8) | (*num<<8);
+    return swapped;
+}
 
 
 int createHEADER(uint16_t* version ,uint8_t macPresent,
                   uint8_t tstmpVer, uint8_t typeVer,
-                  uint8_t lenPresent,TNtlv_t* MTNtlv,...
+                  uint8_t lenPresent,TNtlv_t* MTNtlv
                   )                         // creates header and  returns size
 {
     
@@ -167,10 +178,19 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
         HEADER_SET_DTYPE(header, DTYPE_1BYTE);
         printf("1 byte mf\n");
     }
-    if (lenPresent) {
+    if (lenPresent==1) {
         HEADER_SET_DLEN(header, 1);
-        printf("len here mf\n");
+        printf("len 1 \n");}
+    else if ( lenPresent==2){
+        HEADER_SET_DLEN(header, 2);
+        printf("len 2 \n");
     }
+    else if (lenPresent==3)
+    {
+        HEADER_SET_DLEN(header, 3);
+        printf("len 3 \n");
+    }
+    
     else {
         HEADER_SET_DLEN(header, 0);
     }
@@ -188,11 +208,19 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
 
 
 
-void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense_values,uint8_t type,uint8_t value_size)
+void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense_values,uint16_t type,...)
+/*
+    inserts object in buffer till maximum size is reached then prints , can take as optional arguements mac, timestamp and length.
+    mac always preceeds the other 2 , and timestamp always should preceed the length
+ */
+
 {
-    if (*offset+value_size>=MTTLV_MAX_SIZE)
+    
+    
+
+    if (*offset+sizeof(sense_values)>=MTTLV_MAX_SIZE)
     {
-        if(value_size>MTTLV_MAX_SIZE-5)
+        if(sizeof(sense_values)>MTTLV_MAX_SIZE-5)
         {
             printf("wrong value type, size too big");
         }
@@ -202,42 +230,61 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
     
     else
     {
+        va_list ap;
+        
+        va_start (ap,type);
+        
         buffer[*offset]=MTNtlv->header;
         *offset+=1;
         if (HEADER_GET_MAC(MTNtlv->header)==1)
+        {           MTNtlv->mac = va_arg(ap,uint64_t);
+                    buffer[*offset]=MTNtlv->mac;
+                    *offset+=8;
+        }
+        
+        if (HEADER_GET_TSTMP(MTNtlv->header)==TSTMP_EPOCH)
         {
-            buffer[*offset]=MTNtlv->mac;
-            *offset+=8;
+                    ((uint32_t*)(buffer + *offset))[0]=swap_bytes32(&(MTNtlv->timestamp));
+                    *offset+=4;
+                    printf("timestamp %x\n",MTNtlv->timestamp);
+        }
+        else
+        {
+                    MTNtlv->timestamp= va_arg(ap,uint32_t);
+                    ((uint32_t*)(buffer + *offset))[0]=swap_bytes32(&(MTNtlv->timestamp));
+                    *offset+=4;
+                    printf("timestamp %x\n",MTNtlv->timestamp);
         }
         
         
-            if (HEADER_GET_TSTMP(MTNtlv->header)==TSTMP_EPOCH)
-            {
-               buffer[*offset]=MTNtlv->timestamp;
-                *offset+=4;
-                printf("timestamp %04x\n",MTNtlv->timestamp);
-            }
         
         
-                if (HEADER_GET_DLEN(MTNtlv->header)==1)
-                {
-                    buffer[*offset]=value_size;
-                    *offset+=1;
-                }
         
-        
+        if (HEADER_GET_DTYPE(MTNtlv->header)==DTYPE_2BYTES)
+        {
+                    ((uint16_t*)(buffer + *offset))[0] = swap_bytes16(&type);
+                    *offset+=2;
+        }
+        else
+        {
                     buffer[*offset]=type;
-                    if (HEADER_GET_DTYPE(MTNtlv->header)==DTYPE_2BYTES)
-                    {
-                        *offset+=2;
-                    }
-                    else
-                    {
-                        *offset+=1;
-                        printf("1 homie\n");
-                    }
-                    buffer[*offset]=*sense_values;
-        *offset+=value_size;
+                    *offset+=1;
+                    printf("1 homie\n");
+        }
+        
+        if (HEADER_GET_DLEN(MTNtlv->header)==1)
+        {
+            buffer[*offset]=va_arg(ap,uint64_t);;
+            *offset+=1;
+        }
+        else if (HEADER_GET_DLEN(MTNtlv->header)==2)
+        {
+            buffer[*offset]=va_arg(ap,uint64_t);;
+            *offset+=2;
+            
+        }
+        buffer[*offset]=*sense_values;
+        *offset+=sizeof(sense_values);
        /* int i=0;
         for(i=0;i<=*offset;i+=1)
         {
@@ -246,7 +293,7 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
         printf("\n %d %d",i,*offset);
 
         */
-                }
+           va_end(ap);     }
             }
 
         
@@ -254,7 +301,7 @@ void test(uint8_t* buffer,uint8_t* offset)
 {
     for(int i=0;i<=*offset;i+=1)
     {
-        printf("%d",buffer[i]);
+        printf("%02x ",buffer[i]);
     }
 }
 
