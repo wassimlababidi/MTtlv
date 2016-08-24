@@ -151,7 +151,7 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,uint8_t tlvtype,
     uint8_t type_size = 1;
     if (tlvtype==1)
     {
-     HEADER_SET_TYPE(header,1)}
+     HEADER_SET_TYPE(header,1);}
     
     if (macPresent==1) {
         mac_size = 8;
