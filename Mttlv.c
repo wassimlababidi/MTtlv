@@ -126,10 +126,6 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
                   )                         // creates header and  returns size
 {
     
-  
-    
-  
-    
     if (*version != VERSION_0)
     {
         printf("Unknown release version: %u.\n\r", *version);
@@ -140,20 +136,17 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
     uint8_t finalSize=0;
     
     HEADER_SET_VERSION(header, VERSION_0);
-   
     
     //default init
     uint8_t tstmp_size = 4;
     uint8_t mac_size = 0;
     uint8_t type_size = 1;
-  
     
     if (macPresent==1) {
         mac_size = 8;
         HEADER_SET_MAC(header, 1);
         printf("OK!mac\n");
-        
-    }
+        }
     else {
         HEADER_SET_MAC(header, 0);
         printf("ok no mac\n");
@@ -161,8 +154,7 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
     if (tstmpVer == TSTMP_ELIDED) {         // elided here either means passed as arguement or not needed
         tstmp_size = 0;
         HEADER_SET_TSTMP(header, TSTMP_ELIDED);
-        printf("elided time\n");
-        
+        printf("elided time\n");     
     }
     else {                                  // means epoch timestamp
         HEADER_SET_TSTMP(header, TSTMP_EPOCH);
@@ -194,30 +186,19 @@ int createHEADER(uint16_t* version ,uint8_t macPresent,
     else {
         HEADER_SET_DLEN(header, 0);
     }
-    
-    
     MTNtlv->header = header;
     printf("the header is  %02x\n",header);
-    
     finalSize=HEADER_SIZE+tstmp_size+mac_size+type_size;
-    
 
     return finalSize;                       // returns final size to check if an object is passed or not
 }
-
-
-
 
 void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense_values,uint16_t type,...)
 /*
     inserts object in buffer till maximum size is reached then prints , can take as optional arguements mac, timestamp and length.
     mac always preceeds the other 2 , and timestamp always should preceed the length
  */
-
 {
-    
-    
-
     if (*offset+sizeof(sense_values)>=MTTLV_MAX_SIZE)
     {
         if(sizeof(sense_values)>MTTLV_MAX_SIZE-5)
@@ -255,11 +236,6 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
                     *offset+=4;
                     printf("timestamp %x\n",MTNtlv->timestamp);
         }
-        
-        
-        
-        
-        
         if (HEADER_GET_DTYPE(MTNtlv->header)==DTYPE_2BYTES)
         {
                     ((uint16_t*)(buffer + *offset))[0] = swap_bytes16(&type);
@@ -296,7 +272,6 @@ void insertObject(TNtlv_t* MTNtlv,uint8_t* buffer,uint8_t* offset,uint8_t* sense
            va_end(ap);     }
             }
 
-        
 void test(uint8_t* buffer,uint8_t* offset)
 {
     for(int i=0;i<=*offset;i+=1)
